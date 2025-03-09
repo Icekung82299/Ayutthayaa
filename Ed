@@ -1,0 +1,49 @@
+-- ฟังก์ชันกด E อัตโนมัติ
+local function pressE(prompt)
+    if prompt and prompt:IsA("ProximityPrompt") then
+        fireproximityprompt(prompt) -- กดปุ่มทันที
+    end
+end
+
+-- 🟢 Toggle Auto Farm Rock
+local TabRock = Window:MakeTab({
+    Name = "Auto Farm Rock",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- 🟢 Toggle Auto Farm Rock
+TabRock:AddToggle({
+    Name = "Auto Farm Rock (NoClip & Float Under Rock)",
+    Default = false,
+    Callback = function(state)
+        _G.autoFarmRock = state
+        setNoClip(state) -- เปิดหรือปิด NoClip + ระบบบิน
+
+        while _G.autoFarmRock do
+            local rockModels = workspace.RockSpawner:GetChildren()
+
+            if #rockModels == 0 then
+                print("⏳ ไม่พบหินใน RockSpawner รอ...")
+                task.wait(1) -- รอให้หินเกิดใหม่
+            else
+                for _, rock in ipairs(rockModels) do
+                    if not _G.autoFarmRock then break end
+                    local base = rock:FindFirstChild("Base")
+                    local prompt = base and base:FindFirstChild("Prompt")
+
+                    if base and prompt then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = base.CFrame * CFrame.new(0, -2, 0)
+                        while _G.autoFarmRock and base and base.Parent and base:FindFirstChild("Prompt") do
+                            pressE(prompt)
+                            task.wait(0.05) -- ลดเวลารอให้เร็วขึ้น
+                        end
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+
+        setNoClip(false) -- ปิดระบบบินเมื่อหยุด Auto Farm
+    end
+})
