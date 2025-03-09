@@ -1,0 +1,359 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/jensonhirst/Orion/main/source"))()
+local Window = Library:MakeWindow({Name = "til HUB", HidePremium = false, SaveConfig = true, ConfigFolder = "tilHUB"})
+
+local Tab = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+Tab:AddLabel("Credit : 03s. #4358")
+
+local Tab2 = Window:MakeTab({
+    Name = "Auto Farm",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local Tab3 = Window:MakeTab({
+    Name = "Map GUI Control",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- ฟังก์ชันลอยอยู่ใต้ Base
+local function floatUnderBase(state)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart then
+        if state then
+            -- สร้าง BodyVelocity เพื่อลอย
+            local bodyVelocity = Instance.new("BodyVelocity", humanoidRootPart)
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            bodyVelocity.MaxForce = Vector3.new(0, 0, 0)
+            bodyVelocity.P = 10000
+
+            -- ตั้งค่าให้ลอยอยู่ใต้ Base
+            _G.floatConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                if _G.autoFarmRice or _G.autoFarmRock then
+                    local targetBase = workspace:FindFirstChild("RiceSpawner") or workspace:FindFirstChild("RockSpawner")
+                    if targetBase then
+                        local basePart = targetBase:FindFirstChild("Base")
+                        if basePart then
+                            -- ลอยอยู่ใต้ Base
+                            humanoidRootPart.CFrame = basePart.CFrame * CFrame.new(0, -5, 0)
+                        end
+                    end
+                end
+            end)
+        else
+            -- ปิดการลอย
+            if _G.floatConnection then
+                _G.floatConnection:Disconnect()
+                _G.floatConnection = nil
+            end
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BodyVelocity") then
+                    part:Destroy()
+                end
+            end
+        end
+    end
+end
+
+-- ฟังก์ชันถือ Sickle
+local function equipSickle()
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChild("Humanoid")
+    local backpack = player:FindFirstChild("Backpack")
+    local sickle = backpack and backpack:FindFirstChild("Sickle") or character:FindFirstChild("Sickle")
+
+    if sickle then
+        if not character:FindFirstChild("Sickle") then
+            humanoid:EquipTool(sickle)
+        end
+    else
+        warn("❌ ไม่พบ Sickle ใน Backpack")
+    end
+end
+
+-- ฟังก์ชันถือ Pickaxe
+local function equipPickaxe()
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChild("Humanoid")
+    local backpack = player:FindFirstChild("Backpack")
+    local pickaxe = backpack and backpack:FindFirstChild("Pickaxe") or character:FindFirstChild("Pickaxe")
+
+    if pickaxe then
+        if not character:FindFirstChild("Pickaxe") then
+            humanoid:EquipTool(pickaxe)
+        end
+    else
+        warn("❌ ไม่พบ Pickaxe ใน Backpack")
+    end
+end
+
+-- ฟังก์ชันวาร์ปไปที่เป้าหมาย
+local function teleportToTarget(target)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart and target then
+        humanoidRootPart.CFrame = target.CFrame
+        task.wait(0.1) -- รอให้วาร์ปเสร็จ
+    end
+end
+
+-- ฟังก์ชันกด E อัตโนมัติ
+local function pressE(prompt)
+    if prompt and prompt:IsA("ProximityPrompt") then
+        fireproximityprompt(prompt) -- กดปุ่มทันที
+    end
+end
+
+-- 🟢 Toggle Auto Farm Rice
+Tab2:AddToggle({
+    Name = "Auto Farm Rice",
+    Default = false,
+    Callback = function(state)
+        _G.autoFarmRice = state
+
+        -- เปิด/ปิดระบบลอยอยู่ใต้ Base
+        floatUnderBase(state)
+
+        while _G.autoFarmRice do
+            local riceModels = workspace.RiceSpawner:GetChildren()
+
+            if #riceModels == 0 then
+                print("⏳ ไม่พบข้าวใน RiceSpawner รอ...")
+                task.wait(1) -- รอให้ข้าวเกิดใหม่
+            else
+                for _, rice in ipairs(riceModels) do
+                    if not _G.autoFarmRice then break end
+                    local base = rice:FindFirstChild("Base")
+                    local prompt = base and base:FindFirstChild("Prompt")
+
+                    if base and prompt then
+                        -- ถือ Sickle ก่อนเริ่มฟาร์ม
+                        equipSickle()
+
+                        -- วาร์ปไปที่ข้าว
+                        teleportToTarget(base)
+                        print("🚜 วาร์ปไปเก็บเกี่ยว: " .. rice.Name)
+
+                        -- กด E ซ้ำ ๆ จนกว่าข้าวจะหายไป
+                        while _G.autoFarmRice and base and base.Parent and base:FindFirstChild("Prompt") do
+                            pressE(prompt)
+                            task.wait(0.1) -- กด E ทุก 0.1 วิ
+                        end
+
+                        print("✅ ฟาร์มเสร็จที่: " .. rice.Name)
+                        task.wait(0.2) -- พักเล็กน้อยก่อนวาร์ปไปอันถัดไป
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+
+        -- ปิดระบบลอยอยู่ใต้ Base เมื่อปิด Auto Farm
+        if not _G.autoFarmRice then
+            floatUnderBase(false)
+        end
+    end
+})
+
+-- 🔴 เพิ่มปุ่ม "วาร์ปไปขายข้าว" ในแท็บ Auto Farm
+Tab2:AddButton({
+    Name = "วาร์ปไปขายข้าว",
+    Callback = function()
+        -- ตำแหน่ง CFrame ของที่ขายข้าว
+        local sellRiceCFrame = CFrame.new(
+            370.641235, 38.6072578, 1616.49365,
+            0.774075568, 0.00582228508, 0.633066475,
+            -0.000193884363, 0.999959826, -0.00895951781,
+            -0.633093178, 0.00681260182, 0.774045587
+        )
+
+        -- วาร์ปไปยังตำแหน่งขายข้าว
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+        if humanoidRootPart then
+            humanoidRootPart.CFrame = sellRiceCFrame
+            print("🚀 วาร์ปไปที่ขายข้าว")
+
+            -- หา Prompt ของที่ขายข้าว
+            local sellPrompt
+            for _, part in pairs(workspace:GetDescendants()) do
+                if part:IsA("ProximityPrompt") and part.Name == "SellPrompt" then
+                    sellPrompt = part
+                    break
+                end
+            end
+
+            -- กด E แบบรัวๆ
+            if sellPrompt then
+                print("🔔 พบ Prompt ของที่ขายข้าว")
+                while task.wait() do
+                    pressE(sellPrompt) -- กด E แบบรัวๆ
+                end
+            else
+                warn("❌ ไม่พบ Prompt ของที่ขายข้าว")
+            end
+        else
+            warn("❌ ไม่พบ HumanoidRootPart")
+        end
+    end
+})
+
+-- 🔴 เพิ่มแท็บ Auto Farm Rock
+local TabRock = Window:MakeTab({
+    Name = "Auto Farm Rock",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- 🟢 Toggle Auto Farm Rock
+TabRock:AddToggle({
+    Name = "Auto Farm Rock",
+    Default = false,
+    Callback = function(state)
+        _G.autoFarmRock = state
+
+        -- เปิด/ปิดระบบลอยอยู่ใต้ Base
+        floatUnderBase(state)
+
+        while _G.autoFarmRock do
+            local rockModels = workspace.RockSpawner:GetChildren()
+
+            if #rockModels == 0 then
+                print("⏳ ไม่พบหินใน RockSpawner รอ...")
+                task.wait(1) -- รอให้หินเกิดใหม่
+            else
+                for _, rock in ipairs(rockModels) do
+                    if not _G.autoFarmRock then break end
+
+                    -- หา Base ใน Part ของหิน
+                    local base = rock:FindFirstChild("Base")
+                    if base then
+                        -- หา Prompt ใน Base
+                        local prompt = base:FindFirstChild("Prompt")
+
+                        if prompt then
+                            -- ถือ Pickaxe ก่อนเริ่มฟาร์ม
+                            equipPickaxe()
+
+                            -- วาร์ปไปที่ Base ของหิน
+                            teleportToTarget(base)
+                            print("⛏️ วาร์ปไปขุดหิน: " .. rock.Name)
+
+                            -- กด E ซ้ำ ๆ จนกว่าหินจะหายไป
+                            while _G.autoFarmRock and base and base.Parent and base:FindFirstChild("Prompt") do
+                                pressE(prompt)
+                                task.wait(0.1) -- กด E ทุก 0.1 วิ
+                            end
+
+                            print("✅ ขุดหินเสร็จที่: " .. rock.Name)
+                            task.wait(0.2) -- พักเล็กน้อยก่อนวาร์ปไปอันถัดไป
+                        else
+                            warn("❌ ไม่พบ Prompt ใน Base ของหิน: " .. rock.Name)
+                        end
+                    else
+                        warn("❌ ไม่พบ Base ในหิน: " .. rock.Name)
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+
+        -- ปิดระบบลอยอยู่ใต้ Base เมื่อปิด Auto Farm
+        if not _G.autoFarmRock then
+            floatUnderBase(false)
+        end
+    end
+})
+
+-- 🔴 เพิ่มปุ่ม "วาร์ปไปขายหิน" ในแท็บ Auto Farm Rock
+TabRock:AddButton({
+    Name = "วาร์ปไปขายหิน",
+    Callback = function()
+        -- ตำแหน่ง CFrame ของที่ขายหิน
+        local sellRockCFrame = CFrame.new(
+            353.309448, 38.2631683, 1622.2627,
+            -0.90955627, 0, -0.41558069,
+            0, 1, 0,
+            0.41558069, 0, -0.90955627
+        )
+
+        -- วาร์ปไปยังตำแหน่งขายหิน
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+        if humanoidRootPart then
+            humanoidRootPart.CFrame = sellRockCFrame
+            print("🚀 วาร์ปไปที่ขายหิน")
+
+            -- หา Prompt ของที่ขายหิน
+            local sellPrompt
+            for _, part in pairs(workspace:GetDescendants()) do
+                if part:IsA("ProximityPrompt") and part.Name == "SellPrompt" then
+                    sellPrompt = part
+                    break
+                end
+            end
+
+            -- กด E แบบรัวๆ
+            if sellPrompt then
+                print("🔔 พบ Prompt ของที่ขายหิน")
+                while task.wait() do
+                    pressE(sellPrompt) -- กด E แบบรัวๆ
+                end
+            else
+                warn("❌ ไม่พบ Prompt ของที่ขายหิน")
+            end
+        else
+            warn("❌ ไม่พบ HumanoidRootPart")
+        end
+    end
+})
+
+-- 🔴 เพิ่มแท็บ "วาร์ปจุดต่างๆ"
+local TabTeleport = Window:MakeTab({
+    Name = "วาร์ปจุดต่างๆ",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- 🟢 ปุ่มวาร์ปไปยังจุดเกิดในเมือง
+TabTeleport:AddButton({
+    Name = "วาร์ปไปจุดเกิดในเมือง",
+    Callback = function()
+        local spawnCFrame = CFrame.new(
+            509.337585, 33.7999992, 564.274841
+        )
+        teleportToTarget(spawnCFrame)
+        print("🚀 วาร์ปไปยังจุดเกิดในเมือง")
+    end
+})
+
+-- 🟢 ปุ่มวาร์ปไปยังลานฝึก
+TabTeleport:AddButton({
+    Name = "วาร์ปไปลานฝึก",
+    Callback = function()
+        local trainingCFrame = CFrame.new(
+            -1123.36377, 38.4571724, 590.534729,
+            -0.961273909, -0.000574351812, 0.275594652,
+            -0.000622398977, 0.999999821, -8.68817879e-05,
+            -0.275594532, -0.000255046994, -0.961274147
+        )
+        teleportToTarget(trainingCFrame)
+        print("🚀 วาร์ปไปยังลานฝึก")
+    end
+})
