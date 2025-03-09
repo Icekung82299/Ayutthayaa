@@ -1,0 +1,191 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/jensonhirst/Orion/main/source"))()
+local Window = Library:MakeWindow({Name = "til HUB", HidePremium = false, SaveConfig = true, ConfigFolder = "tilHUB"})
+
+local Tab = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+Tab:AddLabel("Credit : 03s. #4358")
+
+local Tab2 = Window:MakeTab({
+    Name = "Auto Farm",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local Tab3 = Window:MakeTab({
+    Name = "Map GUI Control",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local RunService = game:GetService("RunService")
+local noClipConnection
+
+-- 🟢 ระบบบินอัตโนมัติเมื่อเปิด Auto Farm
+local flying = false
+local flightConnection
+
+local function startFlying()
+    if flying then return end
+    flying = true
+
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart then
+        local bodyPosition = Instance.new("BodyPosition")
+        bodyPosition.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyPosition.Position = humanoidRootPart.Position + Vector3.new(0, -2, 0) -- ลอยต่ำกว่าพื้นเล็กน้อย
+        bodyPosition.Parent = humanoidRootPart
+
+        flightConnection = RunService.Stepped:Connect(function()
+            bodyPosition.Position = humanoidRootPart.Position + Vector3.new(0, -2, 0)
+        end)
+    end
+end
+
+local function stopFlying()
+    if not flying then return end
+    flying = false
+
+    if flightConnection then
+        flightConnection:Disconnect()
+    end
+
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart then
+        for _, obj in pairs(humanoidRootPart:GetChildren()) do
+            if obj:IsA("BodyPosition") then
+                obj:Destroy()
+            end
+        end
+    end
+end
+
+-- ฟังก์ชันเปิด/ปิด NoClip
+local function setNoClip(state)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    if state then
+        -- เปิด NoClip
+        noClipConnection = RunService.Stepped:Connect(function()
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end)
+
+        -- 🟢 เปิดระบบบิน
+        startFlying()
+    else
+        -- ปิด NoClip
+        if noClipConnection then
+            noClipConnection:Disconnect()
+            noClipConnection = nil
+        end
+        -- คืนค่า CanCollide เป็น true
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+
+        -- 🔴 ปิดระบบบิน
+        stopFlying()
+    end
+end
+
+-- ฟังก์ชันกด E อัตโนมัติ
+local function pressE(prompt)
+    if prompt and prompt:IsA("ProximityPrompt") then
+        fireproximityprompt(prompt) -- กดปุ่มทันที
+    end
+end
+
+-- 🔴 เพิ่มแท็บ Auto Farm Rock
+local TabRock = Window:MakeTab({
+    Name = "Auto Farm Rock",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+-- 🟢 Toggle Auto Farm Rice
+Tab2:AddToggle({
+    Name = "Auto Farm Rice (NoClip & Float Under Rice)",
+    Default = false,
+    Callback = function(state)
+        _G.autoFarmRice = state
+        setNoClip(state) -- เปิดหรือปิด NoClip + ระบบบิน
+
+        while _G.autoFarmRice do
+            local riceModels = workspace.RiceSpawner:GetChildren()
+
+            if #riceModels == 0 then
+                print("⏳ ไม่พบข้าวใน RiceSpawner รอ...")
+                task.wait(1) -- รอให้ข้าวเกิดใหม่
+            else
+                for _, rice in ipairs(riceModels) do
+                    if not _G.autoFarmRice then break end
+                    local base = rice:FindFirstChild("Base")
+                    local prompt = base and base:FindFirstChild("Prompt")
+
+                    if base and prompt then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = base.CFrame * CFrame.new(0, -2, 0)
+                        while _G.autoFarmRice and base and base.Parent and base:FindFirstChild("Prompt") do
+                            pressE(prompt)
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+
+        setNoClip(false) -- ปิดระบบบินเมื่อหยุด Auto Farm
+    end
+})
+
+-- 🟢 Toggle Auto Farm Rock
+TabRock:AddToggle({
+    Name = "Auto Farm Rock (NoClip & Float Under Rock)",
+    Default = false,
+    Callback = function(state)
+        _G.autoFarmRock = state
+        setNoClip(state) -- เปิดหรือปิด NoClip + ระบบบิน
+
+        while _G.autoFarmRock do
+            local rockModels = workspace.RockSpawner:GetChildren()
+
+            if #rockModels == 0 then
+                print("⏳ ไม่พบหินใน RockSpawner รอ...")
+                task.wait(1) -- รอให้หินเกิดใหม่
+            else
+                for _, rock in ipairs(rockModels) do
+                    if not _G.autoFarmRock then break end
+                    local base = rock:FindFirstChild("Base")
+                    local prompt = base and base:FindFirstChild("Prompt")
+
+                    if base and prompt then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = base.CFrame * CFrame.new(0, -2, 0)
+                        while _G.autoFarmRock and base and base.Parent and base:FindFirstChild("Prompt") do
+                            pressE(prompt)
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end
+            task.wait(0.5)
+        end
+
+        setNoClip(false) -- ปิดระบบบินเมื่อหยุด Auto Farm
+    end
+})
