@@ -1,0 +1,133 @@
+local UserInputService = game:GetService("UserInputService")
+
+_G.autoFarmRice = false
+_G.autoFarmRock = false
+
+-- ฟังก์ชันถือ Sickle
+local function equipSickle()
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChild("Humanoid")
+    local backpack = player:FindFirstChild("Backpack")
+    local sickle = backpack and backpack:FindFirstChild("Sickle") or character:FindFirstChild("Sickle")
+
+    if sickle then
+        if not character:FindFirstChild("Sickle") then
+            humanoid:EquipTool(sickle)
+        end
+    else
+        warn("❌ ไม่พบ Sickle ใน Backpack")
+    end
+end
+
+-- ฟังก์ชันถือ Pickaxe
+local function equipPickaxe()
+    local player = game:GetService("Players").LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChild("Humanoid")
+    local backpack = player:FindFirstChild("Backpack")
+    local pickaxe = backpack and backpack:FindFirstChild("Pickaxe") or character:FindFirstChild("Pickaxe")
+
+    if pickaxe then
+        if not character:FindFirstChild("Pickaxe") then
+            humanoid:EquipTool(pickaxe)
+        end
+    else
+        warn("❌ ไม่พบ Pickaxe ใน Backpack")
+    end
+end
+
+-- ฟังก์ชันวาร์ปไปที่ตำแหน่ง
+local function teleportToTarget(targetCFrame)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if humanoidRootPart then
+        humanoidRootPart.CFrame = targetCFrame
+    else
+        warn("❌ ไม่พบ HumanoidRootPart")
+    end
+end
+
+-- ฟังก์ชันกด E อัตโนมัติ
+local function pressE(prompt)
+    if prompt and prompt:IsA("ProximityPrompt") then
+        fireproximityprompt(prompt)
+    end
+end
+
+-- ฟังก์ชัน Auto Farm Rice
+local function autoFarmRice()
+    _G.autoFarmRice = not _G.autoFarmRice
+    while _G.autoFarmRice do
+        local riceModels = workspace.RiceSpawner:GetChildren()
+        if #riceModels == 0 then
+            task.wait(1)
+        else
+            for _, rice in ipairs(riceModels) do
+                if not _G.autoFarmRice then break end
+                local base = rice:FindFirstChild("Base")
+                local prompt = base and base:FindFirstChild("Prompt")
+                if base and prompt then
+                    equipSickle()
+                    teleportToTarget(base.CFrame)
+                    while _G.autoFarmRice and base and base.Parent and base:FindFirstChild("Prompt") do
+                        pressE(prompt)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end
+
+-- ฟังก์ชัน Auto Farm Rock
+local function autoFarmRock()
+    _G.autoFarmRock = not _G.autoFarmRock
+    while _G.autoFarmRock do
+        local rockModels = workspace.RockSpawner:GetChildren()
+        if #rockModels == 0 then
+            task.wait(1)
+        else
+            for _, rock in ipairs(rockModels) do
+                if not _G.autoFarmRock then break end
+                local base = rock:FindFirstChild("Base")
+                local prompt = base and base:FindFirstChild("Prompt")
+                if prompt then
+                    equipPickaxe()
+                    teleportToTarget(base.CFrame)
+                    while _G.autoFarmRock and base and base.Parent and base:FindFirstChild("Prompt") do
+                        pressE(prompt)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end
+
+-- ตั้งค่าปุ่มคีย์บอร์ดสำหรับใช้งาน
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.F then
+        equipSickle()
+    elseif input.KeyCode == Enum.KeyCode.G then
+        equipPickaxe()
+    elseif input.KeyCode == Enum.KeyCode.H then
+        teleportToTarget(CFrame.new(370.641235, 38.6072578, 1616.49365)) -- วาร์ปไปขายข้าว
+    elseif input.KeyCode == Enum.KeyCode.J then
+        teleportToTarget(CFrame.new(353.309448, 38.2631683, 1622.2627)) -- วาร์ปไปขายหิน
+    elseif input.KeyCode == Enum.KeyCode.K then
+        teleportToTarget(CFrame.new(509.337585, 33.7999992, 564.274841)) -- วาร์ปไปจุดเกิดในเมือง
+    elseif input.KeyCode == Enum.KeyCode.L then
+        teleportToTarget(CFrame.new(-1123.36377, 38.4571724, 590.534729)) -- วาร์ปไปลานฝึก
+    elseif input.KeyCode == Enum.KeyCode.T then
+        autoFarmRice() -- เปิด/ปิด ออโต้ฟาร์มข้าว
+    elseif input.KeyCode == Enum.KeyCode.Y then
+        autoFarmRock() -- เปิด/ปิด ออโต้ฟาร์มหิน
+    end
+end)
